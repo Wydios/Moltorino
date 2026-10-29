@@ -24,6 +24,7 @@
 #include "providers/twitch/TwitchBadge.hpp"
 #include "singletons/Settings.hpp"
 
+#include <QRegularExpression>
 #include <QSet>
 #include <QTimer>
 
@@ -33,13 +34,55 @@ using namespace chatterino;
 
 constexpr std::size_t MAX_EXACT_HIGHLIGHT_MARKERS_PER_MESSAGE = 256;
 
+bool isMatchInsideDomain(const QRegularExpressionMatch &match,
+    const QString &message,
+    const QString &domain)
+{
+    auto host = domain.trimmed().toLower();
+    host.remove(QRegularExpression(R"(^https?://)"));
+    host = host.section('/', 0, 0)
+               .section('?', 0, 0)
+               .section('#', 0, 0)
+               .section(':', 0, 0);
+
+    if (host.isEmpty())
+    {
+        return false;
+    }
+
+    const auto domainRegex = QRegularExpression(
+        QStringLiteral(
+            R"((?i)(?<![A-Z0-9.-])(?:[A-Z0-9-]+\.)*%1(?![A-Z0-9.-]))")
+            .arg(QRegularExpression::escape(host)));
+
+    auto it = domainRegex.globalMatch(message);
+    while (it.hasNext())
+    {
+        const auto domainMatch = it.next();
+        const auto domainStart = domainMatch.capturedStart();
+        const auto domainEnd =
+            domainStart + domainMatch.capturedLength();
+
+        if (match.capturedStart() >= domainStart &&
+            match.capturedStart() + match.capturedLength() <= domainEnd)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 auto highlightPhraseCheck(
     const HighlightPhrase &highlight, bool hasVisibleExactAppearance,
-    std::optional<MessagePlatform> onlyPlatform = std::nullopt)
+    std::optional<MessagePlatform> onlyPlatform = std::nullopt,
+    bool blockDomainHighlights = false,
+    QString yourDomain = {})
     -> HighlightCheck
 {
     return HighlightCheck{
-        [highlight, hasVisibleExactAppearance, onlyPlatform](
+        [highlight, hasVisibleExactAppearance, onlyPlatform,
+        blockDomainHighlights, yourDomain](
             const auto &args, const auto &twitchBadges, const auto &senderName,
             const auto &originalMessage, const auto &flags, const auto self,
             const auto platform, const auto &normalizedChannelName,
@@ -57,7 +100,23 @@ auto highlightPhraseCheck(
                 return std::nullopt;
             }
 
-            if (!highlight.isMatch(originalMessage))
+            const auto matches = highlight.findMatches(originalMessage);
+            bool hasValidMatch = false;
+
+            for (const auto &match : matches)
+            {
+                if (blockDomainHighlights &&
+                    !yourDomain.trimmed().isEmpty() &&
+                    isMatchInsideDomain(match, originalMessage, yourDomain))
+                {
+                    continue;
+                }
+
+                hasValidMatch = true;
+                break;
+            }
+
+            if (!hasValidMatch)
             {
                 return std::nullopt;
             }
@@ -250,11 +309,17 @@ void rebuildMessageHighlights(Settings &settings,
             ColorProvider::instance().color(ColorType::SelfHighlight),
             std::make_shared<QColor>(selfMatchColor), selfMatchStyle,
             selfMatchPaintID);
+        const bool filterDomain =
+            platform == MessagePlatform::AnyOrTwitch &&
+            settings.blockDomainHighlights;
+
         checks.emplace_back(highlightPhraseCheck(
             highlight,
             hasVisibleExactAppearance(highlight.getMatchStyle(),
                                       highlight.getMatchPaintID()),
-            platform));
+            platform,
+            filterDomain,
+            settings.yourDomain.getValue()));
         if (paintsEnabled && SeventvPaints::isValidPaintID(selfMatchPaintID))
         {
             explicitPaintIDs.insert(
