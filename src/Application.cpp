@@ -36,6 +36,7 @@
 #include "providers/twitch/TwitchBadges.hpp"
 #include "providers/youtube/YouTubeChatServer.hpp"
 #include "singletons/ImageUploader.hpp"
+#include "singletons/UrlShortener.hpp"
 #include "singletons/NativeMessaging.hpp"
 #ifdef CHATTERINO_HAVE_PLUGINS
 #    include "controllers/plugins/PluginController.hpp"
@@ -190,6 +191,7 @@ Application::Application(Settings &_settings, const Paths &paths,
                                 *this->fonts))
     , toasts(new Toasts)
     , imageUploader(new ImageUploader)
+    , urlShortener(new UrlShortener)
     , seventvAPI(new SeventvAPI)
     , crashHandler(new CrashHandler(paths))
 
@@ -622,6 +624,14 @@ ImageUploader *Application::getImageUploader()
     assert(this->imageUploader);
 
     return this->imageUploader.get();
+}
+
+UrlShortener *Application::getUrlShortener()
+{
+    assertInGuiThread();
+    assert(this->urlShortener);
+
+    return this->urlShortener.get();
 }
 
 SeventvAPI *Application::getSeventvAPI()

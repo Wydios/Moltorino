@@ -59,6 +59,7 @@ class BttvBadges;
 class SeventvBadges;
 class SeventvPersonalEmotes;
 class ImageUploader;
+class UrlShortener;
 class SeventvAPI;
 class CrashHandler;
 class BttvEmotes;
@@ -139,6 +140,7 @@ public:
     virtual SeventvPaints *getSeventvPaints() = 0;
     virtual TwitchBadges *getTwitchBadges() = 0;
     virtual ImageUploader *getImageUploader() = 0;
+    virtual UrlShortener *getUrlShortener() = 0;
     virtual SeventvAPI *getSeventvAPI() = 0;
 #ifdef CHATTERINO_HAVE_PLUGINS
     virtual PluginController *getPlugins() = 0;
@@ -202,6 +204,7 @@ private:
     std::unique_ptr<WindowManager> windows;
     std::unique_ptr<Toasts> toasts;
     std::unique_ptr<ImageUploader> imageUploader;
+    std::unique_ptr<UrlShortener> urlShortener;
     std::unique_ptr<SeventvAPI> seventvAPI;
     std::unique_ptr<CrashHandler> crashHandler;
     std::unique_ptr<CommandController> commands;
@@ -295,6 +298,7 @@ public:
     TwitchBadges *getTwitchBadges() override;
     IChatterinoBadges *getChatterinoBadges() override;
     ImageUploader *getImageUploader() override;
+    UrlShortener *getUrlShortener() override;
     SeventvAPI *getSeventvAPI() override;
 #ifdef CHATTERINO_HAVE_PLUGINS
     PluginController *getPlugins() override;

@@ -294,6 +294,13 @@ public:
         return nullptr;
     }
 
+    UrlShortener *getUrlShortener() override
+    {
+        assert(false && "EmptyApplication::getUrlShortener was called without "
+                        "being initialized");
+        return nullptr;
+    }
+
     SeventvAPI *getSeventvAPI() override
     {
         return nullptr;
