@@ -27,6 +27,7 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <QTimer>
+#include <algorithm>
 
 namespace {
 
@@ -100,25 +101,26 @@ auto highlightPhraseCheck(
                 return std::nullopt;
             }
 
-            const auto matches = highlight.findMatches(originalMessage);
-            bool hasValidMatch = false;
-
-            for (const auto &match : matches)
-            {
-                if (blockDomainHighlights &&
-                    !yourDomain.trimmed().isEmpty() &&
-                    isMatchInsideDomain(match, originalMessage, yourDomain))
-                {
-                    continue;
-                }
-
-                hasValidMatch = true;
-                break;
-            }
-
-            if (!hasValidMatch)
+            if (!highlight.isMatch(originalMessage))
             {
                 return std::nullopt;
+            }
+
+            if (blockDomainHighlights && !yourDomain.trimmed().isEmpty())
+            {
+                const auto matches = highlight.findMatches(originalMessage);
+            
+                const bool hasMatchOutsideDomain = std::any_of(
+                    matches.begin(), matches.end(),
+                    [&](const auto &match) {
+                        return !isMatchInsideDomain(
+                            match, originalMessage, yourDomain);
+                    });
+                
+                if (!matches.empty() && !hasMatchOutsideDomain)
+                {
+                    return std::nullopt;
+                }
             }
 
             std::optional<QUrl> highlightSoundUrl;
@@ -641,6 +643,9 @@ HighlightController::HighlightController(Settings &settings,
     this->rebuildListener_.addSetting(settings.automodHighlightSoundUrl);
 
     this->rebuildListener_.addSetting(settings.displaySevenTVPaints);
+
+    this->rebuildListener_.addSetting(settings.blockDomainHighlights);
+    this->rebuildListener_.addSetting(settings.yourDomain);
 
     this->rebuildListener_.setCB([this, &settings] {
         qCDebug(chatterinoHighlights)
