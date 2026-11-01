@@ -1003,8 +1003,8 @@ SplitInput::SplitInput(QWidget *parent, Split *_chatWidget,
         });
     
     std::ignore = this->ui_.textEdit->urlPasted.connect(
-        [this](const QString &url) {
-            this->handleUrlPaste(url);
+        [this](const QString &url, QTextCursor cursor) {
+            this->handleUrlPaste(url, cursor);
         });
 
     // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
@@ -1684,7 +1684,7 @@ void SplitInput::handleImagePaste(const QMimeData *source)
     imageUploader->upload(std::move(images), channel, edit);
 }
 
-void SplitInput::handleUrlPaste(const QString &url)
+void SplitInput::handleUrlPaste(const QString &url, QTextCursor cursor)
 {
     if (!getSettings()->urlShortenerEnabled)
     {
@@ -1748,7 +1748,7 @@ void SplitInput::handleUrlPaste(const QString &url)
 
     QPointer<ResizingTextEdit> edit = this->ui_.textEdit;
 
-    getApp()->getUrlShortener()->shorten(url, channel, edit);
+    getApp()->getUrlShortener()->shorten(url, channel, edit, cursor);
 }
 
 void SplitInput::initLayout()

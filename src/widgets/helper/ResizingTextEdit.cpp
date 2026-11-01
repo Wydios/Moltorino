@@ -553,7 +553,16 @@ void ResizingTextEdit::insertFromMimeData(const QMimeData *source)
         match.hasMatch() &&
         match.captured(0) == pastedText)
     {
-        this->urlPasted.invoke(pastedText);
+        QTextCursor cursor = this->textCursor();
+        cursor.insertText(pastedText);
+
+        const int endPosition = cursor.position();
+        cursor.setPosition(endPosition - pastedText.size());
+        cursor.setPosition(endPosition, QTextCursor::KeepAnchor);
+
+        cursor.setKeepPositionOnInsert(true);
+
+        this->urlPasted.invoke(pastedText, cursor);
         return;
     }
 

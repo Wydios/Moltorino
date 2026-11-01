@@ -13,6 +13,8 @@
 #include "widgets/helper/ResizingTextEdit.hpp"
 #include "common/Channel.hpp"
 
+#include <QTextCursor>
+
 namespace chatterino {
 
 namespace {
@@ -64,14 +66,16 @@ QString getResponseValue(const NetworkResult &result, QString pattern)
 } // namespace
 
 void UrlShortener::shorten(const QString &url, ChannelPtr channel,
-                           QPointer<ResizingTextEdit> textEdit)
+                           QPointer<ResizingTextEdit> textEdit,
+                           QTextCursor cursor)
 {
-    this->sendShortenRequest(url, std::move(channel), std::move(textEdit));
+    this->sendShortenRequest(url, std::move(channel), 
+                             std::move(textEdit), cursor);
 }
 
 void UrlShortener::sendShortenRequest(
     const QString &url, ChannelPtr channel,
-    QPointer<ResizingTextEdit> textEdit)
+    QPointer<ResizingTextEdit> textEdit, QTextCursor cursor)
 {
     QUrl requestUrl(getSettings()->urlShortenerUrl.getValue());
 
@@ -89,8 +93,8 @@ void UrlShortener::sendShortenRequest(
         .headerList(parseHeaderList(
             getSettings()->urlShortenerHeaders.getValue()))
         .json(body)
-        .onSuccess([this, channel, textEdit](NetworkResult result) {
-            this->handleSuccessfulShorten(result, channel, textEdit);
+        .onSuccess([this, channel, textEdit, cursor, url](NetworkResult result) {
+            this->handleSuccessfulShorten(result, channel, textEdit, cursor, url);
         })
         .onError([this, channel](NetworkResult result) -> bool {
             this->handleFailedShorten(result, channel);
@@ -101,7 +105,8 @@ void UrlShortener::sendShortenRequest(
 
 void UrlShortener::handleSuccessfulShorten(
     const NetworkResult &result, ChannelPtr channel,
-    QPointer<ResizingTextEdit> textEdit)
+    QPointer<ResizingTextEdit> textEdit, QTextCursor cursor,
+    const QString &url)
 {
     if (textEdit == nullptr)
     {
@@ -120,14 +125,21 @@ void UrlShortener::handleSuccessfulShorten(
             : getResponseValue(
                   result,
                   getSettings()->urlShortenerDeletionLink.getValue());
-
+    
+    shortUrl = shortUrl.trimmed();
+    
     if (shortUrl.isEmpty())
     {
         channel->addSystemMessage("The URL shortener returned an empty link.");
         return;
     }
 
-    textEdit->insertPlainText(shortUrl + " ");
+    if (cursor.selectedText() != url)
+    {
+        return;
+    }
+
+    cursor.insertText(shortUrl + " ");
 
     MessageBuilder builder(urlShortenerResultMessage, shortUrl,
                            deletionLink);

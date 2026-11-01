@@ -6,6 +6,7 @@
 
 #include <QString>
 #include <QPointer>
+#include <QTextCursor>
 
 namespace chatterino
 {
@@ -20,15 +21,17 @@ class UrlShortener final
 {
 public:
     void shorten(const QString &url, ChannelPtr channel,
-                 QPointer<ResizingTextEdit> textEdit);
+                 QPointer<ResizingTextEdit> textEdit,
+                 QTextCursor cursor);
 
 private:
     void sendShortenRequest(const QString &url, ChannelPtr channel,
-                            QPointer<ResizingTextEdit> textEdit);
+                            QPointer<ResizingTextEdit> textEdit,
+                            QTextCursor cursor);
 
-    void handleSuccessfulShorten(const NetworkResult &result,
-                                 ChannelPtr channel,
-                                 QPointer<ResizingTextEdit> textEdit);
+    void handleSuccessfulShorten(const NetworkResult &result, ChannelPtr channel,
+                                 QPointer<ResizingTextEdit> textEdit,
+                                 QTextCursor cursor, const QString &url);
 
     void handleFailedShorten(const NetworkResult &result,
                              ChannelPtr channel);
